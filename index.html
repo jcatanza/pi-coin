@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Estimating π with a Coin</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;1,8..60,300&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink:       #1a1612;
+    --ink2:      #4a4540;
+    --ink3:      #8a8278;
+    --paper:     #faf7f2;
+    --paper2:    #f2ede4;
+    --paper3:    #e8e0d4;
+    --red:       #c0392b;
+    --blue:      #1a5fa8;
+    --gold:      #b8860b;
+    --green:     #2e7d52;
+    --rule:      rgba(26,22,18,0.12);
+    --mono:      'JetBrains Mono', monospace;
+    --serif:     'Source Serif 4', Georgia, serif;
+    --display:   'Playfair Display', Georgia, serif;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: var(--serif);
+    background: var(--paper);
+    color: var(--ink);
+    font-size: 18px;
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── HEADER ── */
+  .masthead {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 3rem 2rem 2.5rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  .masthead::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 39px,
+      rgba(255,255,255,0.04) 39px,
+      rgba(255,255,255,0.04) 40px
+    );
+  }
+  .masthead-kicker {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: rgba(250,247,242,0.5);
+    margin-bottom: 1rem;
+  }
+  .masthead h1 {
+    font-family: var(--display);
+    font-size: clamp(2.2rem, 6vw, 3.8rem);
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    margin-bottom: 0.6rem;
+  }
+  .masthead h1 em { font-style: italic; color: #e8c97a; }
+  .masthead-sub {
+    font-family: var(--serif);
+    font-size: 1.05rem;
+    font-weight: 300;
+    color: rgba(250,247,242,0.7);
+    max-width: 480px;
+    margin: 0 auto 1.5rem;
+  }
+  .masthead-meta {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: rgba(250,247,242,0.4);
+    letter-spacing: 0.08em;
+  }
+  .masthead-pi {
+    position: absolute;
+    font-family: var(--display);
+    font-size: 280px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.03);
+    right: -20px;
+    top: -40px;
+    line-height: 1;
+    pointer-events: none;
+    user-select: none;
+  }
+
+  /* ── NAV ── */
+  .toc-bar {
+    background: var(--paper2);
+    border-bottom: 1px solid var(--rule);
+    padding: 0 2rem;
+    display: flex;
+    gap: 0;
+    justify-content: center;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .toc-bar a {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink2);
+    text-decoration: none;
+    padding: 12px 16px;
+    border-bottom: 2px solid transparent;
+    transition: border-color 0.2s, color 0.2s;
+  }
+  .toc-bar a:hover { color: var(--ink); border-bottom-color: var(--red); }
+
+  /* ── LAYOUT ── */
+  .page { max-width: 740px; margin: 0 auto; padding: 3rem 2rem; }
+  .page + .page { padding-top: 0; }
+
+  /* ── SECTION HEADERS ── */
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--rule);
+  }
+  .section-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink3);
+    letter-spacing: 0.1em;
+    flex-shrink: 0;
+    padding-top: 2px;
+  }
+  .section-head h2 {
+    font-family: var(--display);
+    font-size: 1.7rem;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+  }
+
+  p { margin-bottom: 1.1rem; }
+  p:last-child { margin-bottom: 0; }
+
+  /* ── CALLOUTS ── */
+  .callout {
+    background: var(--paper2);
+    border-left: 3px solid var(--red);
+    padding: 1rem 1.25rem;
+    margin: 1.75rem 0;
+    border-radius: 0 6px 6px 0;
+  }
+  .callout-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--red);
+    margin-bottom: 0.4rem;
+  }
+  .callout p { font-size: 0.97rem; margin-bottom: 0; }
+
+  .callout-blue { border-left-color: var(--blue); }
+  .callout-blue .callout-label { color: var(--blue); }
+  .callout-green { border-left-color: var(--green); }
+  .callout-green .callout-label { color: var(--green); }
+  .callout-gold { border-left-color: var(--gold); }
+  .callout-gold .callout-label { color: var(--gold); }
+
+  /* ── MATH DISPLAY ── */
+  .math-block {
+    background: var(--ink);
+    color: var(--paper);
+    border-radius: 8px;
+    padding: 1.25rem 1.5rem;
+    margin: 1.75rem 0;
+    font-family: var(--mono);
+    font-size: 0.95rem;
+    line-height: 1.9;
+    overflow-x: auto;
+  }
+  .math-block .eq-label {
+    float: right;
+    font-size: 0.8rem;
+    color: rgba(250,247,242,0.35);
+    margin-left: 1rem;
+  }
+  .math-block .hi { color: #e8c97a; }
+  .math-block .hi2 { color: #7ec8a4; }
+  .math-block .hi3 { color: #f0907a; }
+  .math-block .comment { color: rgba(250,247,242,0.4); font-style: italic; }
+
+  /* ── STEP LIST ── */
+  .proof-steps { counter-reset: step; list-style: none; margin: 1.5rem 0; }
+  .proof-steps li {
+    counter-increment: step;
+    position: relative;
+    padding: 0.9rem 0 0.9rem 3.5rem;
+    border-bottom: 1px solid var(--rule);
+    font-size: 0.97rem;
+  }
+  .proof-steps li:last-child { border-bottom: none; }
+  .proof-steps li::before {
+    content: counter(step);
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 2rem;
+    height: 2rem;
+    background: var(--ink);
+    color: var(--paper);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--mono);
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+  .proof-steps li strong { color: var(--ink); }
+
+  /* ── DIVIDER ── */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--rule);
+    margin: 3rem 0;
+  }
+  .divider-ornament {
+    text-align: center;
+    margin: 2.5rem 0;
+    color: var(--ink3);
+    font-size: 1.1rem;
+    letter-spacing: 0.5em;
+  }
+
+  /* ── INLINE CODE ── */
+  code {
+    font-family: var(--mono);
+    font-size: 0.85em;
+    background: var(--paper3);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--ink);
+  }
+
+  /* ── HIGHLIGHT BOX ── */
+  .theorem-box {
+    border: 1.5px solid var(--ink);
+    border-radius: 8px;
+    padding: 1.5rem 1.75rem;
+    margin: 2rem 0;
+    position: relative;
+  }
+  .theorem-box .theorem-tag {
+    position: absolute;
+    top: -11px;
+    left: 20px;
+    background: var(--paper);
+    padding: 0 8px;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink2);
+  }
+  .theorem-box .big-result {
+    font-family: var(--display);
+    font-size: 1.4rem;
+    text-align: center;
+    margin: 0.5rem 0;
+    color: var(--ink);
+  }
+
+  /* ── WIDGET SECTION ── */
+  .widget-section {
+    background: var(--paper2);
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    padding: 2.5rem 2rem;
+    margin: 0;
+  }
+  .widget-section h3 {
+    font-family: var(--display);
+    font-size: 1.3rem;
+    margin-bottom: 1rem;
+    text-align: center;
+  }
+  .widget-inner {
+    max-width: 740px;
+    margin: 0 auto;
+  }
+
+  /* ── STAT CARDS ── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .stat-card {
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 10px 12px;
+    text-align: center;
+  }
+  .stat-val {
+    font-family: var(--mono);
+    font-size: 1.1rem;
+    font-weight: 500;
+    color: var(--ink);
+    display: block;
+  }
+  .stat-lbl {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink3);
+    letter-spacing: 0.06em;
+    margin-top: 2px;
+  }
+
+  /* ── BUTTONS ── */
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; align-items: center; }
+  .wbtn {
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 7px 14px;
+    border: 1px solid var(--ink3);
+    border-radius: 4px;
+    background: var(--paper);
+    color: var(--ink);
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .wbtn:hover { background: var(--paper3); border-color: var(--ink); }
+  .wbtn:active { transform: scale(0.98); }
+  .wbtn-ghost { color: var(--ink3); border-color: var(--rule); margin-left: auto; }
+  .wbtn-ghost:hover { color: var(--ink); }
+
+  /* ── COIN CHIPS ── */
+  .chip-h, .chip-t {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 99px;
+    margin: 2px;
+  }
+  .chip-h { background: #dceeff; color: #1a5fa8; }
+  .chip-t { background: var(--paper3); color: var(--ink3); }
+
+  #toss-log { min-height: 36px; margin-bottom: 14px; line-height: 2; }
+
+  /* ── CHARTS ── */
+  .chart-wrap { position: relative; width: 100%; height: 200px; }
+  .chart-caption {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink3);
+    text-align: center;
+    letter-spacing: 0.04em;
+    margin-top: 4px;
+    margin-bottom: 16px;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    background: var(--ink);
+    color: rgba(250,247,242,0.5);
+    padding: 2rem;
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+  }
+  footer a { color: rgba(250,247,242,0.7); }
+
+  /* ── FADE IN ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .page, .widget-section {
+    animation: fadeUp 0.5s ease both;
+  }
+
+  /* responsive */
+  @media (max-width: 520px) {
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .toc-bar a { padding: 10px 10px; font-size: 10px; }
+    .masthead-pi { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════ MASTHEAD ══════════ -->
+<header class="masthead">
+  <div class="masthead-pi">π</div>
+  <div class="masthead-kicker">A tutorial on arXiv:2602.14487 · Jim Propp (2026)</div>
+  <h1>Estimating <em>π</em><br>with a Coin</h1>
+  <p class="masthead-sub">How an ordinary coin toss hides one of mathematics' most famous constants</p>
+  <div class="masthead-meta">For advanced high school mathematics · Probability · Random walks · Series</div>
+</header>
+
+<!-- ══════════ NAV ══════════ -->
+<nav class="toc-bar">
+  <a href="#experiment">The Experiment</a>
+  <a href="#why">Why It Works</a>
+  <a href="#proof">The Proof</a>
+  <a href="#demo">Try It</a>
+  <a href="#takeaways">Takeaways</a>
+</nav>
+
+<!-- ══════════ SECTION 1 ══════════ -->
+<section id="experiment">
+<div class="page">
+  <div class="section-head">
+    <span class="section-num">§ 01</span>
+    <h2>The Experiment</h2>
+  </div>
+
+  <p>You have a fair coin. Here is a deceptively simple game:</p>
+
+  <ol class="proof-steps">
+    <li><strong>Toss the coin repeatedly</strong> until the number of heads first exceeds the number of tails.</li>
+    <li><strong>Write down the fraction</strong> H/τ — the number of heads divided by the total number of tosses.</li>
+    <li><strong>Start over</strong> and repeat the game many times.</li>
+    <li><strong>Average all your fractions.</strong></li>
+  </ol>
+
+  <p>The claim — proved by Jim Propp in a 2026 paper — is that this average converges to a number you know well:</p>
+
+  <div class="theorem-box">
+    <span class="theorem-tag">Main Result</span>
+    <div class="big-result">Average of H/τ &nbsp;→&nbsp; π/4 ≈ 0.7854…</div>
+  </div>
+
+  <p>That means if you multiply your average by 4, you get an estimate of π. No circles involved. Just coin flips.</p>
+
+  <div class="callout callout-blue">
+    <div class="callout-label">Example trial</div>
+    <p>Suppose your tosses go: <strong>T, H, T, H, H</strong>. Tails led after toss 1, were tied after toss 2, tails led again after toss 3, tied again after toss 4, and finally heads won after toss 5. So τ = 5, H = 3, and you record <strong>3/5 = 0.6</strong>.</p>
+  </div>
+
+  <p>Notice that the game always ends on a head (heads must outnumber tails for the first time), and τ is always odd: 1, 3, 5, 7, … The simplest outcome — one toss, result is H — gives H/τ = 1/1 = 1. This happens with probability 1/2, since the first toss is heads half the time.</p>
+</div>
+</section>
+
+<div class="divider-ornament">· · ·</div>
+
+<!-- ══════════ SECTION 2 ══════════ -->
+<section id="why">
+<div class="page">
+  <div class="section-head">
+    <span class="section-num">§ 02</span>
+    <h2>Why This Should Surprise You</h2>
+  </div>
+
+  <p>Before looking at any proof, sit with the strangeness of this for a moment. π is the ratio of a circle's circumference to its diameter. It lives in geometry. Why would it appear in the average of fractions generated by coin flips?</p>
+
+  <p>This isn't a coincidence — it's a deep connection between <strong>combinatorics</strong> (counting paths), <strong>probability</strong> (random walks), and <strong>analysis</strong> (series and integrals). Propp's result threads all three together.</p>
+
+  <div class="callout callout-gold">
+    <div class="callout-label">Historical context</div>
+    <p>The most famous geometric π estimator is <strong>Buffon's Needle</strong> (1777): drop a needle of length L onto a floor ruled with parallel lines spaced L apart. The probability of the needle crossing a line is 2/π. Propp's method is the coin-tossing analogue — purely combinatorial, no geometry required.</p>
+  </div>
+
+  <p>The key mathematical object here is a <strong>random walk</strong>. Think of standing at 0 on a number line. Every coin flip moves you +1 (heads) or −1 (tails). The game stops the first time you step onto +1. The question "what fraction of your steps were in the positive direction?" turns out to encode π in its expected value.</p>
+</div>
+</section>
+
+<div class="divider-ornament">· · ·</div>
+
+<!-- ══════════ SECTION 3 ══════════ -->
+<section id="proof">
+<div class="page">
+  <div class="section-head">
+    <span class="section-num">§ 03</span>
+    <h2>The Proof — Step by Step</h2>
+  </div>
+
+  <p>Here's the full proof, broken into pieces a strong high school student can follow. Each step uses only things you've seen in precalc or early calculus.</p>
+
+  <h3 style="font-family:var(--display); font-size:1.15rem; margin:1.5rem 0 0.75rem;">Step 1 — Rewrite the fraction</h3>
+  <p>At the stopping time τ, heads outnumber tails by exactly 1. So:</p>
+  <div class="math-block">
+  H<sub>τ</sub> − T<sub>τ</sub> = <span class="hi">1</span>     (heads beat tails by 1)
+  H<sub>τ</sub> + T<sub>τ</sub> = <span class="hi">τ</span>     (total tosses)
+
+  Adding: 2H<sub>τ</sub> = τ + 1  →  H<sub>τ</sub> = (τ+1)/2
+
+  Therefore: <span class="hi">H<sub>τ</sub>/τ = 1/2 + 1/(2τ)</span>
+  </div>
+  <p>Taking expected values: <strong>E[H<sub>τ</sub>/τ] = 1/2 + (1/2)·E[1/τ]</strong></p>
+  <p>The whole problem reduces to computing <strong>E[1/τ]</strong>. We need to know: on average, how large is 1 divided by the stopping time?</p>
+
+  <h3 style="font-family:var(--display); font-size:1.15rem; margin:1.5rem 0 0.75rem;">Step 2 — Catalan numbers give us P(τ = 2m−1)</h3>
+  <p>For the walk to first hit +1 at step 2m−1, it must: stay ≤ 0 for 2m−2 steps, return to 0 at step 2m−2, then step to +1. The number of such paths is the <strong>Catalan number</strong> C<sub>m−1</sub>:</p>
+
+  <div class="math-block">
+  C<sub>k</sub> = <span class="hi">C(2k, k) / (k+1)</span>   <span class="comment">(the k-th Catalan number)</span>
+
+  First few: C₀=1, C₁=1, C₂=2, C₃=5, C₄=14, C₅=42, …
+
+  P(τ = 2m−1) = C<sub>m−1</sub> / 2<sup>2m−1</sup>
+  </div>
+
+  <div class="callout">
+    <div class="callout-label">What are Catalan numbers?</div>
+    <p>C<sub>k</sub> counts the number of ways to take k steps right and k steps up on a grid without crossing above the diagonal — or equivalently, the number of valid bracket sequences of length 2k, the number of ways to triangulate a polygon, and dozens of other things. They show up everywhere in combinatorics.</p>
+  </div>
+
+  <h3 style="font-family:var(--display); font-size:1.15rem; margin:1.5rem 0 0.75rem;">Step 3 — Compute E[1/τ] using a clever series</h3>
+
+  <div class="math-block">
+  E[1/τ] = Σ<sub>m≥1</sub>  <span class="hi">(1/(2m−1))</span> · C<sub>m−1</sub>/4<sup>m−1</sup> · (1/2)
+
+         = (1/2) · Σ<sub>k≥0</sub>  C<sub>k</sub> / ((2k+1) · 4<sup>k</sup>)    <span class="comment">← let k = m−1</span>
+
+  Call this sum <span class="hi2">A</span> (we'll evaluate it next).
+  </div>
+
+  <h3 style="font-family:var(--display); font-size:1.15rem; margin:1.5rem 0 0.75rem;">Step 4 — Turn the sum into an integral</h3>
+  <p>This is the key trick. Use two identities:</p>
+  <ul style="margin: 0.5rem 0 1rem 1.5rem; font-size: 0.97rem;">
+    <li style="margin-bottom:0.4rem;">C<sub>k</sub> = C(2k,k)/(k+1)</li>
+    <li style="margin-bottom:0.4rem;">1/(k+1) = ∫₀¹ t<sup>k</sup> dt &nbsp; (just integrate t<sup>k</sup> from 0 to 1)</li>
+  </ul>
+  <p>Substituting and swapping sum and integral (Tonelli's theorem says this is legal here):</p>
+
+  <div class="math-block">
+  A = ∫₀¹ <span class="hi">[Σ<sub>k≥0</sub>  C(2k,k)·t<sup>k</sup> / ((2k+1)·4<sup>k</sup>)]</span> dt
+
+  The sum inside is exactly the Taylor series for <span class="hi2">arcsin(√t)/√t</span>:
+
+      arcsin(x) = Σ<sub>k≥0</sub>  C(2k,k)·x<sup>2k+1</sup> / ((2k+1)·4<sup>k</sup>)
+
+  Setting x = √t:  arcsin(√t)/√t = Σ<sub>k≥0</sub>  C(2k,k)·t<sup>k</sup> / ((2k+1)·4<sup>k</sup>)
+
+  So:  A = ∫₀¹ arcsin(√t)/√t dt
+  </div>
+
+  <h3 style="font-family:var(--display); font-size:1.15rem; margin:1.5rem 0 0.75rem;">Step 5 — Evaluate the integral</h3>
+  <p>Substitute u = √t (so t = u², dt = 2u du):</p>
+
+  <div class="math-block">
+  A = ∫₀¹ arcsin(u)/u · 2u du = <span class="hi">2∫₀¹ arcsin(u) du</span>
+
+  Integrate by parts  (let f = arcsin(u), g' = 1):
+
+  ∫₀¹ arcsin(u) du = [u·arcsin(u)]₀¹ − ∫₀¹ u/√(1−u²) du
+
+  Boundary term: 1·arcsin(1) − 0 = <span class="hi">π/2</span>
+
+  Remaining integral: substitute w = 1−u²:
+      ∫₀¹ u/√(1−u²) du = <span class="hi3">1</span>
+
+  So: A = 2(π/2 − 1) = π − 2
+  And: E[1/τ] = A/2 = <span class="hi">(π − 2)/2 = π/2 − 1</span>
+  </div>
+
+  <h3 style="font-family:var(--display); font-size:1.15rem; margin:1.5rem 0 0.75rem;">Step 6 — Assemble the result</h3>
+
+  <div class="math-block">
+  E[H<sub>τ</sub>/τ]  =  1/2 + (1/2)·E[1/τ]
+
+               =  1/2 + (1/2)·(π/2 − 1)
+
+               =  1/2 + π/4 − 1/2
+
+               = <span class="hi" style="font-size:1.1em">π/4</span>   ∎
+  </div>
+
+  <div class="callout callout-green">
+    <div class="callout-label">Bonus insight</div>
+    <p>Half the time τ = 1 (first toss is heads), giving H/τ = 1. The other half gives H/τ &gt; 1/2. So E[H/τ] lies in (3/4, 1). But E[H/τ] = π/4 ≈ 0.785 — which is indeed between 3/4 and 1. This is a probabilistic proof that <strong>3 &lt; π &lt; 4</strong>!</p>
+  </div>
+</div>
+</section>
+
+<!-- ══════════ INTERACTIVE DEMO ══════════ -->
+<section id="demo">
+<div class="widget-section">
+  <div class="widget-inner">
+    <h3 style="font-family:var(--display);">Try It Yourself</h3>
+    <p style="font-size:0.92rem; color:var(--ink2); text-align:center; margin-bottom:1.5rem;">Run the experiment and watch the average converge toward π.</p>
+
+    <div class="stats-row">
+      <div class="stat-card"><span class="stat-val" id="v-n">0</span><span class="stat-lbl">trials</span></div>
+      <div class="stat-card"><span class="stat-val" id="v-est">—</span><span class="stat-lbl">4 × avg</span></div>
+      <div class="stat-card"><span class="stat-val" id="v-err">—</span><span class="stat-lbl">|error|</span></div>
+      <div class="stat-card"><span class="stat-val" id="v-last">—</span><span class="stat-lbl">last H/τ</span></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="wbtn" id="b1">Toss once</button>
+      <button class="wbtn" id="b10">+10</button>
+      <button class="wbtn" id="b100">+100</button>
+      <button class="wbtn" id="b1k">+1,000</button>
+      <button class="wbtn" id="b10k">+10,000</button>
+      <button class="wbtn wbtn-ghost" id="breset">Reset</button>
+    </div>
+
+    <div id="toss-log"></div>
+
+    <div class="chart-wrap"><canvas id="cv-conv"></canvas></div>
+    <div class="chart-caption">Convergence of 4 × avg(Hτ/τ) toward π &nbsp;—&nbsp; red dashed line</div>
+
+    <div class="chart-wrap"><canvas id="cv-hist"></canvas></div>
+    <div class="chart-caption">Distribution of individual H/τ fractions &nbsp;—&nbsp; π/4 marked in red &nbsp;·&nbsp; notice the spike at 1 (τ=1 half the time)</div>
+  </div>
+</div>
+</section>
+
+<!-- ══════════ SECTION 5 ══════════ -->
+<section id="takeaways">
+<div class="page">
+  <div class="section-head">
+    <span class="section-num">§ 04</span>
+    <h2>What to Take Away</h2>
+  </div>
+
+  <div class="callout callout-blue">
+    <div class="callout-label">The new thing in this paper</div>
+    <p>The fact that E[1/τ] = π/2 − 1 was known (it appears in Feller's classic probability textbook, Vol. I). What's new is the realization that E[H<sub>τ</sub>/τ] = π/4 — the fraction of heads at stopping time has π/4 as its expected value. Propp found a probabilistic interpretation that nobody had noticed before.</p>
+  </div>
+
+  <p>The proof chain is worth memorizing as a pattern, because you'll see each move again:</p>
+
+  <ol class="proof-steps">
+    <li><strong>Algebraic simplification</strong> — rewrite E[H/τ] in terms of E[1/τ], a simpler quantity.</li>
+    <li><strong>Combinatorial counting</strong> — use Catalan numbers to get P(τ = 2m−1) exactly.</li>
+    <li><strong>Integral trick</strong> — turn a hard sum into an integral using 1/(k+1) = ∫₀¹ tᵏ dt.</li>
+    <li><strong>Taylor series recognition</strong> — identify the sum inside the integral as arcsin(√t)/√t.</li>
+    <li><strong>Integration by parts</strong> — evaluate ∫ arcsin(u) du, collecting the π term.</li>
+  </ol>
+
+  <div class="callout callout-gold">
+    <div class="callout-label">Why does π appear?</div>
+    <p>The arcsin function is where the circle sneaks in. Its Taylor series coefficients involve the same binomial coefficients C(2k,k) that count Catalan paths. The geometry of circles and the combinatorics of coin-toss paths are secretly the same structure — they both encode the same numbers.</p>
+  </div>
+
+  <p>The convergence you saw in the demo is slow — error decreases like 1/√N. After 10,000 trials you might get within 0.01 of π. This is the inherent cost of Monte Carlo methods: cheap per sample, but slow to converge. Better algorithms exist for computing π, but none of them are this elegant or this surprising.</p>
+
+  <hr class="divider">
+
+  <p style="font-size:0.9rem; color:var(--ink3);">
+    <strong style="color:var(--ink2);">Paper:</strong> Jim Propp, "Estimating π with a Coin," arXiv:2602.14487 [math.PR], February 2026.<br>
+    <strong style="color:var(--ink2);">Further reading:</strong> W. Feller, <em>An Introduction to Probability Theory and Its Applications</em>, Vol. I, 3rd ed. (Wiley, 1968), pp. 318–321 · Louchard &amp; Keller, <em>Stochastic Processes and their Applications</em> 20 (1985), 165–177.
+  </p>
+</div>
+</section>
+
+<!-- ══════════ FOOTER ══════════ -->
+<footer>
+  <div>arXiv:2602.14487 &nbsp;·&nbsp; Jim Propp &nbsp;·&nbsp; February 2026</div>
+  <div style="margin-top:6px; opacity:0.5;">Tutorial by Claude · Anthropic · 2026</div>
+</footer>
+
+<!-- ══════════ SCRIPTS ══════════ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+(function() {
+  var fracs = [];
+  var convChart = null;
+  var histChart = null;
+  var N_BINS = 20;
+  var BIN_MIN = 0.5, BIN_MAX = 1.0;
+  var BIN_W = (BIN_MAX - BIN_MIN) / N_BINS;
+  var bins = new Array(N_BINS).fill(0);
+  var BIN_LABELS = [];
+  for (var b = 0; b < N_BINS; b++) BIN_LABELS.push((BIN_MIN + (b + 0.5) * BIN_W).toFixed(3));
+
+  function oneTrial() {
+    var h = 0, t = 0;
+    while (h <= t) { if (Math.random() < 0.5) h++; else t++; }
+    return { h: h, tau: h + t };
+  }
+
+  function updateDOM() {
+    var n = fracs.length;
+    document.getElementById('v-n').textContent = n;
+    if (n === 0) { document.getElementById('v-est').textContent = '—'; document.getElementById('v-err').textContent = '—'; return; }
+    var s = 0; for (var i = 0; i < n; i++) s += fracs[i];
+    var est = 4 * s / n;
+    document.getElementById('v-est').textContent = est.toFixed(5);
+    document.getElementById('v-err').textContent = Math.abs(est - Math.PI).toFixed(5);
+  }
+
+  function updateConvChart() {
+    if (!convChart) return;
+    var n = fracs.length, step = Math.max(1, Math.ceil(n / 300)), pts = [], s = 0;
+    for (var i = 0; i < n; i++) {
+      s += fracs[i];
+      if ((i + 1) % step === 0 || i === n - 1) pts.push({ x: i + 1, y: parseFloat((4 * s / (i + 1)).toFixed(6)) });
+    }
+    convChart.data.datasets[0].data = pts;
+    convChart.update('none');
+  }
+
+  function updateHistChart() {
+    if (!histChart) return;
+    var n = fracs.length;
+    histChart.data.datasets[0].data = bins.map(function(c) { return n > 0 ? parseFloat((100 * c / n).toFixed(2)) : 0; });
+    histChart.update('none');
+  }
+
+  function run(k, showLog) {
+    var last;
+    for (var i = 0; i < k; i++) {
+      last = oneTrial();
+      var f = last.h / last.tau;
+      fracs.push(f);
+      var bi = Math.min(N_BINS - 1, Math.floor((f - BIN_MIN) / BIN_W));
+      if (bi >= 0) bins[bi]++;
+    }
+    document.getElementById('v-last').textContent = last.h + '/' + last.tau;
+    if (showLog) {
+      var html = '';
+      for (var j = 0; j < last.tau; j++) {
+        var isH = j < last.h;
+        html += '<span class="' + (isH ? 'chip-h' : 'chip-t') + '">' + (isH ? 'H' : 'T') + '</span>';
+      }
+      html += '<span style="font-size:11px;color:var(--ink3);margin-left:6px;font-family:var(--mono);">→ ' + last.h + '/' + last.tau + ' = ' + (last.h / last.tau).toFixed(4) + '</span>';
+      document.getElementById('toss-log').innerHTML = html;
+    } else {
+      document.getElementById('toss-log').innerHTML = '<span style="font-size:11px;color:var(--ink3);font-family:var(--mono);">Ran ' + k + ' trials. Last: ' + last.h + '/' + last.tau + '</span>';
+    }
+    updateDOM(); updateConvChart(); updateHistChart();
+  }
+
+  function reset() {
+    fracs = []; bins = new Array(N_BINS).fill(0);
+    document.getElementById('toss-log').innerHTML = '';
+    document.getElementById('v-last').textContent = '—';
+    updateDOM(); updateConvChart(); updateHistChart();
+  }
+
+  document.getElementById('b1').onclick    = function() { run(1, true); };
+  document.getElementById('b10').onclick   = function() { run(10, false); };
+  document.getElementById('b100').onclick  = function() { run(100, false); };
+  document.getElementById('b1k').onclick   = function() { run(1000, false); };
+  document.getElementById('b10k').onclick  = function() { run(10000, false); };
+  document.getElementById('breset').onclick = reset;
+
+  var poll = setInterval(function() {
+    if (typeof Chart === 'undefined') return;
+    clearInterval(poll);
+
+    var ctx1 = document.getElementById('cv-conv').getContext('2d');
+    convChart = new Chart(ctx1, {
+      type: 'line',
+      data: {
+        datasets: [
+          { data: [], borderColor: '#1a5fa8', borderWidth: 1.5, pointRadius: 0, tension: 0.3, fill: false },
+          { data: [{ x: 0, y: Math.PI }, { x: 1e7, y: Math.PI }], borderColor: '#c0392b', borderWidth: 1.5, borderDash: [5, 4], pointRadius: 0, fill: false }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        plugins: { legend: { display: false }, tooltip: { enabled: false } },
+        scales: {
+          x: { type: 'linear', ticks: { color: '#8a8278', font: { size: 10, family: "'JetBrains Mono', monospace" }, maxTicksLimit: 6 }, grid: { color: 'rgba(26,22,18,0.08)' } },
+          y: { min: 2.5, max: 3.8, ticks: { color: '#8a8278', font: { size: 10, family: "'JetBrains Mono', monospace" }, callback: function(v) { return v.toFixed(1); } }, grid: { color: 'rgba(26,22,18,0.08)' } }
+        }
+      }
+    });
+
+    var ctx2 = document.getElementById('cv-hist').getContext('2d');
+    histChart = new Chart(ctx2, {
+      type: 'bar',
+      data: {
+        labels: BIN_LABELS,
+        datasets: [{ data: new Array(N_BINS).fill(0), backgroundColor: '#b5d4f4', borderColor: '#1a5fa8', borderWidth: 0.5, borderRadius: 2 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: {
+            title: function(i) { return 'H/τ ≈ ' + i[0].label; },
+            label: function(i) { return i.raw.toFixed(1) + '% of trials'; }
+          }}
+        },
+        scales: {
+          x: { ticks: { color: '#8a8278', font: { size: 9, family: "'JetBrains Mono', monospace" }, maxTicksLimit: 8, maxRotation: 0 }, grid: { display: false } },
+          y: { ticks: { color: '#8a8278', font: { size: 10, family: "'JetBrains Mono', monospace" }, callback: function(v) { return v + '%'; } }, grid: { color: 'rgba(26,22,18,0.08)' } }
+        }
+      }
+    });
+
+    // Draw π/4 marker on histogram after first render
+    var piPlugin = {
+      id: 'piLine',
+      afterDraw: function(chart) {
+        var ctx = chart.ctx;
+        var xScale = chart.scales.x;
+        var yScale = chart.scales.y;
+        var piBin = (Math.PI/4 - BIN_MIN) / BIN_W - 0.5;
+        var x = xScale.getPixelForValue(piBin);
+        ctx.save();
+        ctx.strokeStyle = '#c0392b';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([5, 4]);
+        ctx.beginPath();
+        ctx.moveTo(x, yScale.top);
+        ctx.lineTo(x, yScale.bottom);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = '#c0392b';
+        ctx.font = "10px 'JetBrains Mono', monospace";
+        ctx.fillText('π/4', x + 4, yScale.top + 14);
+        ctx.restore();
+      }
+    };
+    Chart.register(piPlugin);
+    histChart.update('none');
+  }, 50);
+})();
+</script>
+</body>
+</html>
